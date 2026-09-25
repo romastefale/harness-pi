@@ -99,6 +99,8 @@ class Handler(BaseHTTPRequestHandler):
     def dispatch(self, body):
         action = body.get("action")
         if action == "status":
+            if not os.environ.get("chave_sk"):
+                raise RuntimeError("Defina a variável de ambiente chave_sk antes de iniciar o cliente.")
             return {"ready": True, "mode": "sdk"}
         if action == "workspace":
             raw_path = str(body.get("path", "")).strip()
@@ -140,6 +142,9 @@ class Handler(BaseHTTPRequestHandler):
             session_id, prompt = str(body.get("sessionId", "")), str(body.get("text", "")).strip()
             if not session_id or not prompt:
                 raise ValueError("A solicitação está vazia ou a sessão é inválida.")
+            key = os.environ.get("chave_sk")
+            if not key:
+                raise RuntimeError("Defina a variável de ambiente chave_sk antes de iniciar o cliente.")
             with database() as db:
                 row = db.execute("SELECT w.path FROM sessions s JOIN workspaces w ON w.id=s.workspace_id WHERE s.id=?", (session_id,)).fetchone()
                 if not row:
@@ -149,7 +154,7 @@ class Handler(BaseHTTPRequestHandler):
                 db.execute("UPDATE sessions SET updated_at=? WHERE id=?", (stamp, session_id))
             # Serialize launches because this private client shares one Harness home.
             with RUN_LOCK:
-                with DeepSeekHarness(provider="deepseek-official", model=MODEL, cwd=row["path"], dsh_home=str(DSH_HOME), profile="sdk") as harness:
+                with DeepSeekHarness(provider="deepseek-official", model=MODEL, api_key=key, cwd=row["path"], dsh_home=str(DSH_HOME), profile="sdk") as harness:
                     result = harness.run(prompt, session_id=session_id)
             answer = str(result.final_response or "").strip()
             if not answer:
