@@ -29,6 +29,7 @@ RUNNING = set()
 RUNNING_LOCK = threading.Lock()
 MODEL = os.environ.get("DSH_MODEL", "deepseek-v4-flash")
 PUBLIC_HOST = os.environ.get("RAILWAY_PUBLIC_DOMAIN", "harness-pi.up.railway.app").lower()
+PUBLIC_HOSTS = {PUBLIC_HOST, "harness-pi.up.railway.app"}
 APP_HOST = "0.0.0.0" if os.environ.get("RAILWAY_ENVIRONMENT") or os.environ.get("RAILWAY_PUBLIC_DOMAIN") else "127.0.0.1"
 APP_PORT = int(os.environ.get("PORT", "8765"))
 
@@ -173,7 +174,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_OPTIONS(self):
         origin = self.headers.get("origin", "")
-        if urlparse(self.path).path != "/api/harness-pi" or origin not in self.server.allowed_origins:
+        if urlparse(self.path).path != "/api/harness-pi" or self.headers.get("host", "").lower() not in PUBLIC_HOSTS or origin not in self.server.allowed_origins:
             self.send_error(403)
             return
         self.send_response(204)
@@ -274,7 +275,7 @@ class LocalServer(ThreadingHTTPServer):
     allowed_origins = ("https://harness-pi.up.railway.app", "https://romastefale.github.io")
 
     def valid_request(self, host, origin):
-        if host == PUBLIC_HOST:
+        if host in PUBLIC_HOSTS:
             return origin in self.allowed_origins
         return host in (f"127.0.0.1:{self.server_port}", f"localhost:{self.server_port}") and origin == f"http://{host}"
 
