@@ -19,6 +19,7 @@ ROOT = Path(__file__).resolve().parent
 DSH_HOME = Path(os.environ.get("DSH_HOME", str(Path.home() / ".dsh"))).expanduser().resolve()
 DB_PATH = DSH_HOME / "harness-pi-client.sqlite3"
 RUN_LOCK = threading.Lock()
+MODEL = os.environ.get("DSH_MODEL", "deepseek-v4-flash")
 
 
 @contextmanager
@@ -143,7 +144,7 @@ class Handler(BaseHTTPRequestHandler):
                 db.execute("UPDATE sessions SET updated_at=? WHERE id=?", (stamp, session_id))
             # Serialize launches because this private client shares one Harness home.
             with RUN_LOCK:
-                with DeepSeekHarness(provider="deepseek-official", model="deepseek-v4-flash", cwd=row["path"], dsh_home=str(DSH_HOME), profile="sdk") as harness:
+                with DeepSeekHarness(provider="deepseek-official", model=MODEL, cwd=row["path"], dsh_home=str(DSH_HOME), profile="sdk") as harness:
                     result = harness.run(prompt, session_id=session_id)
             answer = str(result.final_response or "").strip()
             if not answer:
@@ -163,10 +164,13 @@ class LocalServer(ThreadingHTTPServer):
 
 
 def main():
+    global MODEL
     parser = argparse.ArgumentParser(description="Cliente local Pithomate para DeepSeek Harness")
     parser.add_argument("--host", default="127.0.0.1", choices=("127.0.0.1", "localhost"))
     parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument("--model", default=MODEL, help="ID do modelo disponível no perfil SDK")
     args = parser.parse_args()
+    MODEL = args.model
     server = LocalServer((args.host, args.port), Handler)
     print(f"Pithomate local: http://{args.host}:{args.port}")
     print(f"Harness home: {DSH_HOME}")
