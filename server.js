@@ -12,6 +12,7 @@ const workspace = resolve(process.env.HARNESS_WORKSPACE || join(home, 'workspace
 const port = Number(process.env.PORT || 8080)
 const webPort = 3080
 const publicHost = (process.env.RAILWAY_PUBLIC_DOMAIN || 'harness-pi.up.railway.app').trim().toLowerCase()
+const username = (process.env.Usuario_Acesso || '').trim()
 const rawPassword = (process.env.Senha_Acesso || '').trim()
 const pairedQuotes = [['"', '"'], ["'", "'"], ['“', '”'], ['‘', '’']]
 const password = rawPassword.length >= 2 && pairedQuotes.some(([open, close]) => rawPassword.startsWith(open) && rawPassword.endsWith(close))
@@ -19,6 +20,7 @@ const password = rawPassword.length >= 2 && pairedQuotes.some(([open, close]) =>
   : rawPassword
 const key = process.env.Chave_SK || ''
 
+if (!username) throw new Error('Usuario_Acesso não está configurado.')
 if (!password) throw new Error('Senha_Acesso não está configurada.')
 if (!key) throw new Error('Chave_SK não está configurada.')
 if (!/^[a-z0-9.-]+(?::\d+)?$/u.test(publicHost)) throw new Error('RAILWAY_PUBLIC_DOMAIN inválido.')
@@ -81,7 +83,7 @@ function authorized(header = '') {
   if (scheme?.toLowerCase() !== 'basic' || !encoded) return false
   const value = Buffer.from(encoded, 'base64').toString('utf8')
   const split = value.indexOf(':')
-  return split >= 0 && value.slice(0, split) === 'HarnessPI' && equal(value.slice(split + 1), password)
+  return split >= 0 && equal(value.slice(0, split), username) && equal(value.slice(split + 1), password)
 }
 
 function hasNativeCookie(header = '') {
