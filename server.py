@@ -60,6 +60,13 @@ def now_ms():
     return int(time.time() * 1000)
 
 
+def access_password():
+    value = os.environ.get("Senha_Acesso", "").strip()
+    if len(value) >= 2 and (value[0], value[-1]) in (("\"", "\""), ("'", "'"), ("“", "”"), ("‘", "’")):
+        value = value[1:-1]
+    return value
+
+
 def save_event(session_id, event):
     if not isinstance(event, dict):
         return
@@ -188,7 +195,7 @@ class Handler(BaseHTTPRequestHandler):
     def dispatch(self, body):
         action = body.get("action")
         if action == "login":
-            password = os.environ.get("Senha_Acesso", "")
+            password = access_password()
             if not password:
                 raise RuntimeError("Configure Senha_Acesso nas variáveis do Railway.")
             if not hmac.compare_digest(str(body.get("password", "")), password):
@@ -280,7 +287,7 @@ class LocalServer(ThreadingHTTPServer):
         return host in (f"127.0.0.1:{self.server_port}", f"localhost:{self.server_port}") and origin == f"http://{host}"
 
     def authenticated(self, value):
-        password = os.environ.get("Senha_Acesso", "")
+        password = access_password()
         return bool(password) and value.startswith("Bearer ") and hmac.compare_digest(value[7:], password)
 
 
