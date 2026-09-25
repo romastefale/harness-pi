@@ -2,6 +2,7 @@
 """Single-user local Pithomate client backed by the official Harness SDK."""
 import argparse
 import hashlib
+import hmac
 import json
 import os
 import sqlite3
@@ -23,6 +24,9 @@ DSH_HOME = Path(os.environ.get("DSH_HOME", str(Path.home() / ".dsh"))).expanduse
 DB_PATH = DSH_HOME / "harness-pi-client.sqlite3"
 RUN_LOCK = threading.Lock()
 MODEL = os.environ.get("DSH_MODEL", "deepseek-v4-flash")
+APP_HOST = "0.0.0.0" if os.environ.get("RAILWAY_ENVIRONMENT") or os.environ.get("RAILWAY_PUBLIC_DOMAIN") else "127.0.0.1"
+APP_PORT = int(os.environ.get("PORT", "8765"))
+PUBLIC_HOST = os.environ.get("RAILWAY_PUBLIC_DOMAIN", "harness-pi.up.railway.app").lower()
 
 
 @contextmanager
@@ -55,12 +59,15 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, _fmt, *_args):
         pass
 
-    def send_json(self, status, value):
+    def send_json(self, status, value, origin=None):
         body = json.dumps(value, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
         self.send_header("content-type", "application/json; charset=utf-8")
         self.send_header("cache-control", "no-store")
         self.send_header("x-content-type-options", "nosniff")
+        if origin:
+            self.send_header("access-control-allow-origin", origin)
+            self.send_header("vary", "Origin")
         self.send_header("content-length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -84,23 +91,50 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json(404, {"ok": False, "error": "Rota não encontrada."})
             return
         host = self.headers.get("host", "").lower()
-        if not self.server.valid_host(host) or self.headers.get("origin") != f"http://{host}":
-            self.send_json(403, {"ok": False, "error": "Acesso local recusado."})
+        origin = self.headers.get("origin", "")
+        if not self.server.valid_request(host, origin):
+            self.send_json(403, {"ok": False, "error": "Origem recusada."})
             return
         try:
             length = int(self.headers.get("content-length", "0"))
             if length <= 0 or length > 1_000_000:
                 raise ValueError("Solicitação inválida.")
-            value = self.dispatch(json.loads(self.rfile.read(length)))
-            self.send_json(200, {"ok": True, "value": value})
+            body = json.loads(self.rfile.read(length))
+            action = body.get("action")
+            if action != "login" and not self.server.authenticated(self.headers.get("authorization", "")):
+                self.send_json(401, {"ok": False, "error": "Entre com sua senha privada."}, origin)
+                return
+            value = self.dispatch(body)
+            self.send_json(200, {"ok": True, "value": value}, origin)
         except Exception as error:
-            self.send_json(400, {"ok": False, "error": str(error) or error.__class__.__name__})
+            self.send_json(400, {"ok": False, "error": str(error) or error.__class__.__name__}, origin)
+
+    def do_OPTIONS(self):
+        host = self.headers.get("host", "").lower()
+        origin = self.headers.get("origin", "")
+        if urlparse(self.path).path != "/api/harness-pi" or not self.server.valid_request(host, origin):
+            self.send_error(403)
+            return
+        self.send_response(204)
+        self.send_header("access-control-allow-origin", origin)
+        self.send_header("access-control-allow-methods", "POST, OPTIONS")
+        self.send_header("access-control-allow-headers", "Authorization, Content-Type")
+        self.send_header("access-control-max-age", "600")
+        self.send_header("vary", "Origin")
+        self.end_headers()
 
     def dispatch(self, body):
         action = body.get("action")
+        if action == "login":
+            password = os.environ.get("Senha_Acesso", "")
+            if not password:
+                raise RuntimeError("Configure Senha_Acesso nas variáveis do Railway.")
+            if not hmac.compare_digest(str(body.get("password", "")), password):
+                raise PermissionError("Senha incorreta.")
+            return {"authorized": True}
         if action == "status":
-            if not os.environ.get("chave_sk"):
-                raise RuntimeError("Defina a variável de ambiente chave_sk antes de iniciar o cliente.")
+            if not os.environ.get("Chave_SK"):
+                raise RuntimeError("Configure Chave_SK nas variáveis do Railway.")
             return {"ready": True, "mode": "sdk"}
         if action == "workspace":
             raw_path = str(body.get("path", "")).strip()
@@ -142,9 +176,9 @@ class Handler(BaseHTTPRequestHandler):
             session_id, prompt = str(body.get("sessionId", "")), str(body.get("text", "")).strip()
             if not session_id or not prompt:
                 raise ValueError("A solicitação está vazia ou a sessão é inválida.")
-            key = os.environ.get("chave_sk")
+            key = os.environ.get("Chave_SK")
             if not key:
-                raise RuntimeError("Defina a variável de ambiente chave_sk antes de iniciar o cliente.")
+                raise RuntimeError("Configure Chave_SK nas variáveis do Railway.")
             with database() as db:
                 row = db.execute("SELECT w.path FROM sessions s JOIN workspaces w ON w.id=s.workspace_id WHERE s.id=?", (session_id,)).fetchone()
                 if not row:
@@ -170,19 +204,28 @@ class LocalServer(ThreadingHTTPServer):
     daemon_threads = True
 
     def valid_host(self, host):
-        return host in (f"127.0.0.1:{self.server_port}", f"localhost:{self.server_port}")
+        return host == PUBLIC_HOST or host in (f"127.0.0.1:{self.server_port}", f"localhost:{self.server_port}")
+
+    def valid_request(self, host, origin):
+        if host != PUBLIC_HOST:
+            return self.valid_host(host) and origin == f"http://{host}"
+        return origin in (f"https://{PUBLIC_HOST}", "https://romastefale.github.io")
+
+    def authenticated(self, value):
+        password = os.environ.get("Senha_Acesso", "")
+        return bool(password) and value.startswith("Bearer ") and hmac.compare_digest(value[7:], password)
 
 
 def main():
     global MODEL
     parser = argparse.ArgumentParser(description="Cliente local Pithomate para DeepSeek Harness")
-    parser.add_argument("--host", default="127.0.0.1", choices=("127.0.0.1", "localhost"))
-    parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument("--host", default=APP_HOST)
+    parser.add_argument("--port", type=int, default=APP_PORT)
     parser.add_argument("--model", default=MODEL, help="ID do modelo disponível no perfil SDK")
     args = parser.parse_args()
     MODEL = args.model
     server = LocalServer((args.host, args.port), Handler)
-    print(f"Pithomate local: http://{args.host}:{args.port}")
+    print(f"Pithomate: {PUBLIC_HOST if args.host == '0.0.0.0' else f'http://{args.host}:{args.port}'}")
     print(f"Harness home: {DSH_HOME}")
     print("Use Ctrl+C para encerrar.")
     try:
