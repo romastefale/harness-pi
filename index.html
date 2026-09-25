@@ -29,7 +29,7 @@
         <section class="hero">
           <div class="eyebrow">DeepSeek Harness</div>
           <h1>Seu espaço de código</h1>
-          <div class="sub">As sessões, os modelos e as permissões são controlados pelo Harness.</div>
+          <div class="sub">Cliente local do Harness SDK. Suas credenciais permanecem no diretório local do Harness.</div>
           <div class="status" style="margin-top:12px"><span class="dot" id="dot"></span><span id="conn">Verificando conexão</span></div>
         </section>
         <section class="card" id="workspaceCard">
@@ -51,7 +51,7 @@
     </section>
     <form class="composer" id="composer"><div class="entry"><textarea id="prompt" rows="1" placeholder="O que vamos construir?" aria-label="Solicitação" enterkeyhint="send"></textarea></div><button class="send" id="send" type="submit" aria-label="Enviar" disabled><svg viewBox="0 0 24 24"><path d="M5 12h13M12 5l7 7-7 7"/></svg></button></form>
   </main>
-  <div class="sheet" id="sheet" role="dialog" aria-modal="true"><div class="sheet-card"><div class="sheet-head"><strong>Conexão</strong><button class="btn" id="closeSheet" type="button">Fechar</button></div><div class="note">Este cliente usa a sessão autenticada do Harness neste mesmo endereço. A chave do provedor permanece nas configurações do Harness e não é lida nem salva por esta página.</div><div class="status" style="margin-top:14px"><span class="dot" id="sheetDot"></span><span id="sheetStatus">Verificando</span></div><div class="problem" id="connectionError" hidden></div></div></div>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true"><div class="sheet-card"><div class="sheet-head"><strong>Conexão</strong><button class="btn" id="closeSheet" type="button">Fechar</button></div><div class="note">Este cliente roda no seu computador pelo SDK oficial do Harness, sem abrir a interface Web. Ele usa as credenciais já salvas no diretório do Harness; a chave não é exibida nem enviada pelo navegador.</div><div class="status" style="margin-top:14px"><span class="dot" id="sheetDot"></span><span id="sheetStatus">Verificando</span></div><div class="problem" id="connectionError" hidden></div></div></div>
   <div class="toast" id="toast"></div>
   <script>
     (()=>{
@@ -75,7 +75,7 @@
       async function openSession(id){st.sid=id;localStorage.setItem('hpi.session',id);$('#conversationCard').hidden=false;$('#sessionTitle').textContent=id;$('#sessionError').hidden=true;renderSessions();try{await readSession()}catch(e){$('#sessionError').textContent=err(e);$('#sessionError').hidden=false}}
       async function createSession(){const v=await api('create',{workspaceId:st.ws.workspaceId});st.sid=v.sessionId;localStorage.setItem('hpi.session',st.sid);$('#conversationCard').hidden=false;$('#sessionTitle').textContent=st.sid;$('#messages').replaceChildren();$('#sessionError').hidden=true;await loadSessions()}
       async function monitor(){let empty=0,count=0;while(count<600){count++;const v=await readSession();if(!v.running&&count>3)empty++;else empty=0;if(empty>=2)break;await new Promise(r=>setTimeout(r,1100))}if(count>=600)throw new Error('A sessão continua ativa. Atualize para conferir o estado.')}
-      async function submit(e){e.preventDefault();const val=$('#prompt').value.trim();if(!val||st.busy||!st.ws)return;st.busy=true;updateSend();$('#sessionError').hidden=true;try{if(!st.sid||!st.sessions.some(x=>x.sessionId===st.sid))await createSession();await api('prompt',{sessionId:st.sid,text:val});$('#prompt').value='';resize();await loadSessions();await monitor();await loadSessions();status(true,'Conectado ao Harness')}catch(e){$('#sessionError').textContent=err(e);$('#sessionError').hidden=false;status(false,'Falha na sessão')}finally{st.busy=false;updateSend()}}
+      async function submit(e){e.preventDefault();const val=$('#prompt').value.trim();if(!val||st.busy||!st.ws)return;st.busy=true;updateSend();$('#sessionError').hidden=true;try{if(!st.sid||!st.sessions.some(x=>x.sessionId===st.sid))await createSession();$('#working').hidden=false;$('#sessionState').textContent='Em andamento';await api('prompt',{sessionId:st.sid,text:val});$('#prompt').value='';resize();await readSession();await loadSessions();status(true,'Conectado ao Harness SDK')}catch(e){$('#working').hidden=true;$('#sessionError').textContent=err(e);$('#sessionError').hidden=false;status(false,'Falha na sessão')}finally{st.busy=false;updateSend()}}
       function resize(){const x=$('#prompt');x.style.height='auto';x.style.height=Math.min(x.scrollHeight,150)+'px';updateSend()}
       $('#workspaceForm').onsubmit=e=>{e.preventDefault();const p=$('#path').value.trim();if(p)setWorkspace(p)};
       $('#editPath').onclick=()=>{st.ws=null;showPath();$('#path').value=st.path;$('#path').focus()};
@@ -86,7 +86,7 @@
       $('#prompt').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();if(!$('#send').disabled)$('#composer').requestSubmit()}});
       $('#menuBtn').onclick=()=>$('#sheet').classList.add('open');$('#closeSheet').onclick=()=>$('#sheet').classList.remove('open');$('#sheet').onclick=e=>{if(e.target===$('#sheet'))$('#sheet').classList.remove('open')};
       $('#path').value=st.path;showPath();
-      api('status').then(()=>status(true,'Conectado ao Harness')).catch(e=>status(false,err(e)));
+      api('status').then(()=>status(true,'Harness SDK local')).catch(e=>status(false,err(e)));
       if(st.path)setWorkspace(st.path);
       else status(true,'Conectado ao Harness');
       if(st.sid){$('#conversationCard').hidden=false;$('#sessionTitle').textContent=st.sid}
