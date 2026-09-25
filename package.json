@@ -1,8 +1,7 @@
 {
-  "name": "harness-pi-client",
-  "version": "0.1.0",
-  "type": "module",
-  "main": "index.js",
-  "files": ["index.js", "index.html", "cordis.patch.yml"],
-  "dsh": { "bundle": { "patch": "./cordis.patch.yml" } }
+  "name": "pithomate-harness-client",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Cliente local pessoal do DeepSeek Harness, executado pelo SDK oficial.",
+  "scripts": { "start": "python server.py" }
 }
