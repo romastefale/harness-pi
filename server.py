@@ -13,7 +13,10 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
-from deepseek_harness import DeepSeekHarness
+try:
+    from deepseek_harness import DeepSeekHarness
+except ModuleNotFoundError:
+    DeepSeekHarness = None
 
 ROOT = Path(__file__).resolve().parent
 DSH_HOME = Path(os.environ.get("DSH_HOME", str(Path.home() / ".dsh"))).expanduser().resolve()
@@ -132,6 +135,8 @@ class Handler(BaseHTTPRequestHandler):
                 records.append({"seq": row["seq"], "event": {"type": event_type, "data": {"message": {"content": [{"type": "text", "text": row["content"]}]}}}})
             return {"page": {"records": records}, "running": False}
         if action == "prompt":
+            if DeepSeekHarness is None:
+                raise RuntimeError("SDK ausente. Rode `python -m pip install -r requirements.txt`.")
             session_id, prompt = str(body.get("sessionId", "")), str(body.get("text", "")).strip()
             if not session_id or not prompt:
                 raise ValueError("A solicitação está vazia ou a sessão é inválida.")
