@@ -20,10 +20,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Caddy (proxy reverso com autenticação básica)
-RUN curl -fsSL https://github.com/caddyserver/caddy/releases/latest/download/caddy_linux_amd64.tar.gz \
+RUN curl -fsSL https://github.com/caddyserver/caddy/releases/download/v2.11.4/caddy_2.11.4_linux_amd64.tar.gz \
     | tar -xz -C /usr/local/bin caddy \
     && chmod +x /usr/local/bin/caddy
-
+    
 WORKDIR /app
 
 COPY package*.json ./
