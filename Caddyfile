@@ -1,0 +1,24 @@
+{
+    admin off
+    persist_config off
+    auto_https off
+}
+
+:{$PORT} {
+    # Healthcheck sem autenticação (o prober do Railway não envia credenciais)
+    handle /healthz {
+        respond "ok" 200
+    }
+
+    # Todo o resto exige autenticação básica
+    basic_auth {
+        {$DSH_UI_USERNAME} {$DSH_UI_PASSWORD_HASH}
+    }
+
+    reverse_proxy 127.0.0.1:3080 {
+        # Reescreve Host e Origin para o loopback,
+        # senão a fence anti-DNS-rebinding do DSH bloqueia a API
+        header_up Host 127.0.0.1:3080
+        header_up Origin http://127.0.0.1:3080
+    }
+}
