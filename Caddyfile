@@ -10,15 +10,26 @@
         respond "ok" 200
     }
 
-    # Todo o resto exige autenticação básica
+    # Rotas internas do DSH que não devem exigir basic auth
+    @dsh_internal {
+        path /api/* /.well-known/* /assets/* /static/* /favicon.ico
+    }
+    handle @dsh_internal {
+        reverse_proxy 127.0.0.1:3080 {
+            header_up Host 127.0.0.1:3080
+            header_up Origin http://127.0.0.1:3080
+            header_up X-Forwarded-Proto https
+        }
+    }
+
+    # Todo o resto exige autenticação básica do Caddy
     basic_auth {
         {$DSH_UI_USERNAME} {$DSH_UI_PASSWORD_HASH}
     }
 
     reverse_proxy 127.0.0.1:3080 {
-        # Reescreve Host e Origin para o loopback,
-        # senão a fence anti-DNS-rebinding do DSH bloqueia a API
         header_up Host 127.0.0.1:3080
         header_up Origin http://127.0.0.1:3080
+        header_up X-Forwarded-Proto https
     }
 }
