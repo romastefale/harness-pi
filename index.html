@@ -6,6 +6,12 @@
     <title>Harness Pi — DeepSeek Harness</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
         body {
             font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             background: #050810;
@@ -14,94 +20,225 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            overflow: hidden;
             position: relative;
         }
-        .bg-gradient {
+
+        /* ===== Fundo cromático animado ===== */
+        .chroma-bg {
+            position: fixed;
+            inset: -20%;
+            z-index: 0;
+            filter: blur(80px) saturate(180%);
+            opacity: 0.85;
+            background:
+                radial-gradient(circle at 20% 30%, #2563eb 0%, transparent 45%),
+                radial-gradient(circle at 80% 25%, #7c3aed 0%, transparent 45%),
+                radial-gradient(circle at 30% 80%, #06b6d4 0%, transparent 45%),
+                radial-gradient(circle at 75% 75%, #ec4899 0%, transparent 45%);
+            background-size: 100% 100%;
+            animation: chromaDrift 18s ease-in-out infinite alternate;
+        }
+
+        @keyframes chromaDrift {
+            0%   { transform: scale(1)    rotate(0deg);   }
+            50%  { transform: scale(1.15) rotate(6deg);   }
+            100% { transform: scale(1.05) rotate(-6deg);  }
+        }
+
+        /* Véu escuro por cima, para o texto respirar */
+        .veil {
             position: fixed;
             inset: 0;
+            z-index: 1;
             background:
-                radial-gradient(ellipse 80% 60% at 20% 40%, rgba(30, 80, 180, 0.35), transparent),
-                radial-gradient(ellipse 70% 50% at 80% 60%, rgba(80, 40, 160, 0.3), transparent),
-                radial-gradient(ellipse 60% 40% at 50% 20%, rgba(0, 120, 200, 0.2), transparent);
-            animation: fluidMove 20s ease-in-out infinite alternate;
-            z-index: 0;
+                radial-gradient(ellipse 80% 70% at 50% 50%, rgba(5,8,16,0.25), rgba(5,8,16,0.85)),
+                linear-gradient(180deg, rgba(5,8,16,0.4), rgba(5,8,16,0.7));
         }
-        @keyframes fluidMove {
-            0% { transform: scale(1) translate(0, 0); opacity: 0.9; }
-            50% { transform: scale(1.1) translate(-2%, 1%); opacity: 1; }
-            100% { transform: scale(1.05) translate(1%, -1%); opacity: 0.95; }
-        }
+
+        /* Grid de pontos sutil */
         .bg-grid {
             position: fixed;
             inset: 0;
-            background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
-            background-size: 40px 40px;
-            z-index: 1;
-            mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 30%, transparent 80%);
+            z-index: 2;
+            background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+            background-size: 42px 42px;
+            mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 25%, transparent 80%);
+            -webkit-mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 25%, transparent 80%);
         }
+
         .container {
             position: relative;
             z-index: 10;
             text-align: center;
             padding: 2rem;
-            max-width: 600px;
+            max-width: 620px;
             width: 100%;
         }
+
         .logo {
-            font-size: 3rem;
+            font-size: 3.2rem;
             font-weight: 700;
             letter-spacing: -0.03em;
-            background: linear-gradient(135deg, #4a9eff 0%, #a78bfa 50%, #4a9eff 100%);
+            background: linear-gradient(120deg, #4a9eff 0%, #a78bfa 35%, #22d3ee 65%, #ec4899 100%);
+            background-size: 200% 200%;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.6rem;
+            animation: chromaText 8s ease-in-out infinite;
         }
+
+        @keyframes chromaText {
+            0%   { background-position: 0% 50%; }
+            50%  { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
         .subtitle {
-            font-size: 1.1rem;
-            color: #9aa0a6;
+            font-size: 1.05rem;
+            color: #b6bcc4;
             margin-bottom: 2.5rem;
             font-weight: 400;
+            letter-spacing: 0.02em;
         }
+
+        /* ===== Liquid Glass Card ===== */
         .card {
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 16px;
-            padding: 2rem;
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            position: relative;
+            padding: 2.4rem 2rem 2rem;
+            border-radius: 24px;
+            background: linear-gradient(
+                135deg,
+                rgba(255, 255, 255, 0.10) 0%,
+                rgba(255, 255, 255, 0.03) 40%,
+                rgba(255, 255, 255, 0.06) 100%
+            );
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            backdrop-filter: blur(28px) saturate(180%);
+            -webkit-backdrop-filter: blur(28px) saturate(180%);
+            box-shadow:
+                0 8px 32px rgba(0, 0, 0, 0.45),
+                inset 0 1px 0 rgba(255, 255, 255, 0.25),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+            overflow: hidden;
+            isolation: isolate;
         }
+
+        /* Brilho deslizante sobre o vidro */
+        .card::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(
+                115deg,
+                transparent 30%,
+                rgba(255, 255, 255, 0.28) 45%,
+                rgba(255, 255, 255, 0.05) 50%,
+                transparent 65%
+            );
+            transform: translateX(-120%);
+            animation: sheen 6s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        @keyframes sheen {
+            0%, 20%  { transform: translateX(-120%); }
+            60%      { transform: translateX(120%);  }
+            100%     { transform: translateX(120%);  }
+        }
+
+        /* Halo cromático por trás do vidro */
+        .card::after {
+            content: "";
+            position: absolute;
+            inset: -2px;
+            border-radius: inherit;
+            background: conic-gradient(
+                from 0deg,
+                #2563eb, #7c3aed, #22d3ee, #ec4899, #2563eb
+            );
+            filter: blur(22px);
+            opacity: 0.35;
+            z-index: -1;
+            animation: haloSpin 10s linear infinite;
+        }
+
+        @keyframes haloSpin {
+            to { transform: rotate(360deg); }
+        }
+
         .btn {
+            position: relative;
+            z-index: 2;
             display: inline-block;
-            padding: 0.9rem 2.5rem;
+            padding: 0.95rem 2.6rem;
             font-size: 1rem;
             font-weight: 600;
             color: #fff;
             background: linear-gradient(135deg, #2563eb, #7c3aed);
             border: none;
-            border-radius: 12px;
+            border-radius: 14px;
             cursor: pointer;
             text-decoration: none;
-            transition: all 0.25s ease;
-            box-shadow: 0 4px 20px rgba(37, 99, 235, 0.35);
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+            box-shadow:
+                0 4px 20px rgba(37, 99, 235, 0.45),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
         }
+
         .btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 30px rgba(37, 99, 235, 0.5);
+            box-shadow:
+                0 10px 34px rgba(37, 99, 235, 0.6),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4);
         }
+
         .btn:active { transform: translateY(0); }
-        .status {
-            margin-top: 1.5rem;
-            font-size: 0.85rem;
-            color: #6b7280;
+
+        /* ===== Barra de progresso (15s) ===== */
+        .progress-track {
+            position: relative;
+            z-index: 2;
+            margin-top: 1.8rem;
+            height: 6px;
+            width: 100%;
+            border-radius: 99px;
+            background: rgba(255, 255, 255, 0.08);
+            overflow: hidden;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
         }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            border-radius: 99px;
+            background: linear-gradient(90deg, #2563eb, #7c3aed, #22d3ee);
+            background-size: 200% 100%;
+            animation: barShine 3s linear infinite;
+            transition: width 1s linear;
+        }
+
+        @keyframes barShine {
+            0%   { background-position: 0% 50%; }
+            100% { background-position: 200% 50%; }
+        }
+
+        .status {
+            position: relative;
+            z-index: 2;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: #9aa0a6;
+            letter-spacing: 0.01em;
+        }
+
         .status.redirecting { color: #4a9eff; }
+
         .spinner {
             display: inline-block;
-            width: 16px;
-            height: 16px;
+            width: 14px;
+            height: 14px;
             border: 2px solid rgba(74, 158, 255, 0.3);
             border-top-color: #4a9eff;
             border-radius: 50%;
@@ -109,16 +246,27 @@
             vertical-align: middle;
             margin-right: 8px;
         }
+
         @keyframes spin { to { transform: rotate(360deg); } }
+
         .footer {
             margin-top: 2rem;
             font-size: 0.75rem;
-            color: #4b5563;
+            color: #6b7280;
+            letter-spacing: 0.04em;
+        }
+
+        @media (max-width: 480px) {
+            .logo { font-size: 2.4rem; }
+            .subtitle { font-size: 0.95rem; }
+            .card { padding: 2rem 1.4rem 1.6rem; border-radius: 20px; }
+            .btn { padding: 0.85rem 2rem; font-size: 0.95rem; }
         }
     </style>
 </head>
 <body>
-    <div class="bg-gradient"></div>
+    <div class="chroma-bg"></div>
+    <div class="veil"></div>
     <div class="bg-grid"></div>
 
     <div class="container">
@@ -127,7 +275,14 @@
 
         <div class="card">
             <a href="#" id="launch-btn" class="btn">Acessar Harness</a>
-            <p class="status" id="status">Redirecionando para o servidor...</p>
+
+            <div class="progress-track">
+                <div class="progress-bar" id="progress"></div>
+            </div>
+
+            <p class="status" id="status">
+                <span class="spinner"></span>Redirecionando em 15s...
+            </p>
         </div>
 
         <p class="footer">Uso pessoal · Não afiliado à DeepSeek</p>
@@ -136,30 +291,38 @@
     <script>
         // ✅ URL REAL DO SEU RAILWAY
         const RAILWAY_URL = 'https://harness-pi.up.railway.app';
+        const TOTAL_SECONDS = 15;
 
         const btn = document.getElementById('launch-btn');
         const status = document.getElementById('status');
+        const progress = document.getElementById('progress');
 
         btn.href = RAILWAY_URL;
 
-        let countdown = 3;
+        let remaining = TOTAL_SECONDS;
+        progress.style.width = '0%';
+
         const timer = setInterval(() => {
-            countdown--;
-            if (countdown > 0) {
-                status.innerHTML = `<span class="spinner"></span>Redirecionando em ${countdown}s...`;
+            remaining--;
+
+            const elapsed = TOTAL_SECONDS - remaining;
+            const pct = (elapsed / TOTAL_SECONDS) * 100;
+            progress.style.width = pct + '%';
+
+            if (remaining > 0) {
+                status.innerHTML =
+                    `<span class="spinner"></span>Redirecionando em ${remaining}s...`;
             } else {
                 clearInterval(timer);
+                progress.style.width = '100%';
                 status.textContent = 'Redirecionando...';
                 status.classList.add('redirecting');
                 window.location.href = RAILWAY_URL;
             }
         }, 1000);
 
-        status.innerHTML = `<span class="spinner"></span>Redirecionando em ${countdown}s...`;
-
-        btn.addEventListener('click', () => {
-            clearInterval(timer);
-        });
+        // Se o usuário clicar, cancela o timer e vai direto
+        btn.addEventListener('click', () => clearInterval(timer));
     </script>
 </body>
 </html>
