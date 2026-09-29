@@ -33,9 +33,6 @@ COPY . .
 
 RUN chmod +x /app/entrypoint.sh
 
-# Volume para persistir sessões e workspace
-VOLUME ["/data"]
-
 EXPOSE 8080
 
 ENTRYPOINT ["/app/entrypoint.sh"]
